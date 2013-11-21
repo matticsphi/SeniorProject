@@ -1,0 +1,142 @@
+/*
+  USB Data Logger
+  Students: Mattics Phi, Scott Leonard, Greg Alesso, Norman Tran
+  Advisor: Dale Dolan
+  California Polytechnic State University
+  Senior Project
+  Spring 2013
+*/
+
+int i;
+static int flag = 0;  // Flag to print out header
+long result;  // Vcc in millivolts
+unsigned int digRead;  // Digital value of voltage read from input
+double voltage;  // Voltage read from analog input
+double vcc;  // Vcc in volts
+double voltVal;  // Voltage value to print
+double curVal;  // Current value to print
+double potVal;  // Digital potentiometer value
+int potPin = 0;  // Analog pin for potentiometer
+double logDelay;  // Logging speed delay in ms
+
+void setup()
+{
+  Serial.begin(9600);         //  Set up serial
+  // Input pullup resistors used instead of external pulldowns
+  // HIGH = OFF, LOW = ON
+  pinMode(9, INPUT_PULLUP);   // Switch for analog pin 2 (Voltage 1)
+  pinMode(10, INPUT_PULLUP);  // Switch for analog pin 3 (Voltage 2)
+  pinMode(11, INPUT_PULLUP);  // Switch for analog pin 4 (Voltage 3)
+  pinMode(12, INPUT_PULLUP);  // Switch for analog pin 5 (Current)
+  pinMode(13, INPUT_PULLUP);  // Switch for analog pin 0 (Potentiometer)
+  Keyboard.begin();           // Set up keyboard entry
+}
+
+void loop()
+{
+  if (digitalRead(13) == LOW)  // Pin 13 must be grounded to start writing
+  {
+    if (flag == 0)  // Print out header at the top
+    {
+      flag = initializeHeader();
+	}
+  adjustDelay();  // Set logging speed by adjusting delay
+    for (i = 5; i >= 2; i­­)
+    {
+      if (digitalRead(i+7) == LOW)
+      {
+        // Log voltages from analog pins 2­4, current from analog pin 5
+        if (i == 5)  // Current pin
+        {
+          voltVal = readVoltage(i);  // Read voltage
+          curVal = (voltVal­2.56)*5.555;  // Scale value for current
+          Keyboard.print(curVal);
+        }
+        else  // Voltage pin
+        {
+          voltVal = readVoltage(i)*5.1;  // Read and scale voltage
+          Keyboard.print(voltVal);
+        }
+      }
+      if (i == 2)  // Reached end of line
+      {
+        insertTab();
+        // Print logging speed in ms (0 to 200)
+        Keyboard.print(logDelay);
+        insertEnter();
+      }
+      else
+      {
+        insertTab();
+      }
+    }
+  }
+}
+
+int initializeHeader()
+{
+  Keyboard.print("Current");
+  insertTab();
+  Keyboard.print("Voltage 1");
+  insertTab();
+  Keyboard.print("Voltage 2");
+  insertTab();
+  Keyboard.print("Voltage 3");
+  insertTab();
+  Keyboard.print("Logging Delay (ms)");
+  insertEnter();
+  return 1;
+}
+
+void insertTab()
+{
+  Keyboard.write(KEY_TAB);
+}
+
+void insertEnter()
+{
+  Keyboard.write(KEY_RETURN);
+}
+
+long readVcc() {
+  // Read 1.1V reference against AVcc
+  // set the reference to Vcc and the measurement to the internal 1.1V
+reference
+  #if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) ||
+defined(__AVR_ATmega2560__)
+    ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+  #elif defined (__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) ||
+defined(__AVR_ATtiny84__)
+    ADMUX = _BV(MUX5) | _BV(MUX0);
+  #elif defined (__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) ||
+defined(__AVR_ATtiny85__)
+    ADMUX = _BV(MUX3) | _BV(MUX2);
+  #else
+    ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+  #endif
+  delay(2); // Wait for Vref to settle
+  ADCSRA |= _BV(ADSC); // Start conversion
+  while (bit_is_set(ADCSRA,ADSC)); // measuring
+  uint8_t low  = ADCL; // must read ADCL first ­ it then locks ADCH
+  uint8_t high = ADCH; // unlocks both
+  result = (high<<8) | low;
+  result = 1125300L / result; // Calculate Vcc (in mV); 1125300 =
+1.1*1023*1000
+  return result; // Vcc in millivolts
+}
+double readVoltage(int anPin)
+{
+  vcc = readVcc()/1000.0;  // Read Vcc
+digRead = analogRead(anPin);  // Read analog pin
+  delay(10);
+  voltage = ((digRead/1023.0)*vcc);  // Calculate voltage
+  return voltage;
+}
+
+void adjustDelay()
+{
+  potVal = analogRead(potPin);  // Read the potentiometer value
+  // Potentiometer reading should be between 0 and 1023
+  logDelay = potVal/5.115;  // Gives a delay between 0 and 200 ms
+  delay(logDelay);
+}
