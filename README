@@ -1,0 +1,1 @@
+Design and implemented a portable, low-cost USB data-logger that connects to all computers that have a spreadsheet program.  Measures multiple voltages and currents and outputs it in the spreadsheet program in tabular form.  Accurate to 2 decimal places with voltage varying from 0-40 V and current from 0-20 A
